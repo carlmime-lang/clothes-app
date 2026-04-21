@@ -75,29 +75,40 @@ button {
   <button class="back" onclick="show('home')">뒤로</button>
 </div>
 
-<!-- 안정된 라이브러리 -->
+<!-- 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <script>
 
+// 모델 & 학습 URL
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
+// 화면 전환
 function show(page) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(page).classList.add('active');
 }
 
+// 교사용
 function openTrain() {
   window.open(TRAIN_URL, "_blank");
 }
 
+// 🔊 음성 함수
+function speak(text) {
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = "ko-KR";
+  window.speechSynthesis.cancel(); // 중복 방지
+  window.speechSynthesis.speak(msg);
+}
+
 let model, webcam;
+let lastState = ""; // 중복 음성 방지
 
+// 시작
 async function start() {
-  console.log("start 실행됨");
-
   try {
     const modelURL = MODEL_URL + "model.json";
     const metaURL = MODEL_URL + "metadata.json";
@@ -105,7 +116,6 @@ async function start() {
     model = await tmImage.load(modelURL, metaURL);
 
     webcam = new tmImage.Webcam(300, 300, true);
-
     await webcam.setup();
     await webcam.play();
 
@@ -115,29 +125,45 @@ async function start() {
     loop();
   } catch (e) {
     console.error(e);
-    alert("카메라 또는 모델 로딩 실패");
+    alert("카메라 실행 오류");
   }
 }
 
+// 반복
 async function loop() {
   webcam.update();
   await predict();
   requestAnimationFrame(loop);
 }
 
+// 예측 + 음성
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
 
   let text = "";
+  let currentState = "";
 
   prediction.forEach(p => {
     if (p.className === "앞" && p.probability > 0.8) {
       text = "👍 잘 입었어요!";
+      currentState = "good";
     }
     if (p.className === "뒤" && p.probability > 0.8) {
       text = "❌ 반대로 입었어요!";
+      currentState = "bad";
     }
   });
+
+  // 상태 바뀔 때만 음성 출력
+  if (currentState !== "" && currentState !== lastState) {
+    if (currentState === "good") {
+      speak("잘 입었어요");
+    }
+    if (currentState === "bad") {
+      speak("다시 생각해봐요");
+    }
+    lastState = currentState;
+  }
 
   document.getElementById("result").innerHTML =
     "<h2 style='font-size:30px'>" + text + "</h2>";
