@@ -1,124 +1,122 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>옷 확인 앱</title>
 
 <style>
 body {
-  text-align:center;
-  font-family:sans-serif;
-  background:#f5f5f5;
+  font-family: sans-serif;
+  text-align: center;
+  background: #f5f5f5;
 }
 
-.screen { display:none; }
-.active { display:block; }
+.screen { display: none; }
+.active { display: block; }
 
 button {
-  font-size:22px;
-  padding:15px;
-  margin:10px;
-  width:80%;
-  border:none;
-  border-radius:10px;
+  font-size: 20px;
+  padding: 15px;
+  margin: 10px;
+  width: 80%;
+  border: none;
+  border-radius: 10px;
 }
 
 .big {
-  font-size:28px;
-  padding:20px;
-  background:#4CAF50;
-  color:white;
+  font-size: 26px;
+  background: #4CAF50;
+  color: white;
 }
 
-.teacher-btn {
-  background:#607D8B;
-  color:white;
+.teacher {
+  background: #607D8B;
+  color: white;
 }
 
 .back {
-  background:#999;
-  color:white;
+  background: #999;
+  color: white;
 }
 </style>
 </head>
 
 <body>
 
-<!-- 시작 화면 -->
+<!-- 홈 -->
 <div id="home" class="screen active">
   <h2>👕 옷 확인 앱</h2>
-  <button class="teacher-btn" onclick="show('teacher')">👩‍🏫 교사용</button>
+  <button class="teacher" onclick="show('teacher')">👩‍🏫 교사용</button>
   <button class="big" onclick="show('student')">👦 학생용</button>
 </div>
 
 <!-- 교사용 -->
 <div id="teacher" class="screen">
-  <h2>👩‍🏫 옷 등록</h2>
-  <p>학생의 옷 앞/뒤를 학습합니다</p>
+  <h2>👩‍🏫 옷 등록 (학습)</h2>
+  <p>Teachable Machine에서 학습합니다</p>
 
-  <button class="teacher-btn" onclick="goTrain()">옷 등록하기</button>
+  <button class="teacher" onclick="openTrain()">옷 등록하기</button>
 
-  <br><br>
-  <button class="back" onclick="show('home')">⬅ 뒤로</button>
+  <br>
+  <button class="back" onclick="show('home')">뒤로</button>
 </div>
 
 <!-- 학생용 -->
 <div id="student" class="screen">
-  <h2>👦 옷 확인하기</h2>
+  <h2>👦 옷 확인</h2>
 
   <button class="big" onclick="start()">시작</button>
 
-  <div id="webcam-container"></div>
-  <div id="label-container"></div>
+  <div id="webcam"></div>
+  <div id="result"></div>
 
   <br>
-  <button class="back" onclick="show('home')">⬅ 뒤로</button>
+  <button class="back" onclick="show('home')">뒤로</button>
 </div>
 
-<!-- 🔥 라이브러리 (버전 고정이 중요) -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8"></script>
+<!-- 안정된 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <script>
 
-console.log("스크립트 정상 실행됨");
-
-// ✅ 모델 URL
-const URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
-
-// ✅ 학습 페이지 URL
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
-// 화면 전환
-function show(screen) {
+function show(page) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(screen).classList.add('active');
+  document.getElementById(page).classList.add('active');
 }
 
-// 교사용
-function goTrain() {
+function openTrain() {
   window.open(TRAIN_URL, "_blank");
 }
 
-// AI 실행
 let model, webcam;
 
 async function start() {
-  console.log("시작 버튼 눌림");
+  console.log("start 실행됨");
 
-  const modelURL = URL + "model.json";
-  const metadataURL = URL + "metadata.json";
+  try {
+    const modelURL = MODEL_URL + "model.json";
+    const metaURL = MODEL_URL + "metadata.json";
 
-  model = await tmImage.load(modelURL, metadataURL);
+    model = await tmImage.load(modelURL, metaURL);
 
-  webcam = new tmImage.Webcam(300, 300, true);
-  await webcam.setup();
-  await webcam.play();
+    webcam = new tmImage.Webcam(300, 300, true);
 
-  document.getElementById("webcam-container").innerHTML = "";
-  document.getElementById("webcam-container").appendChild(webcam.canvas);
+    await webcam.setup();
+    await webcam.play();
 
-  loop();
+    document.getElementById("webcam").innerHTML = "";
+    document.getElementById("webcam").appendChild(webcam.canvas);
+
+    loop();
+  } catch (e) {
+    console.error(e);
+    alert("카메라 또는 모델 로딩 실패");
+  }
 }
 
 async function loop() {
@@ -130,19 +128,19 @@ async function loop() {
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
 
-  let result = "";
+  let text = "";
 
   prediction.forEach(p => {
     if (p.className === "앞" && p.probability > 0.8) {
-      result = "👍 잘 입었어요!";
+      text = "👍 잘 입었어요!";
     }
     if (p.className === "뒤" && p.probability > 0.8) {
-      result = "❌ 반대로 입었어요!";
+      text = "❌ 반대로 입었어요!";
     }
   });
 
-  document.getElementById("label-container").innerHTML =
-    "<h2 style='font-size:32px'>" + result + "</h2>";
+  document.getElementById("result").innerHTML =
+    "<h2 style='font-size:30px'>" + text + "</h2>";
 }
 
 </script>
