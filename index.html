@@ -22,26 +22,31 @@ button {
 .big { background: #4CAF50; color: white; }
 .teacher { background: #607D8B; color: white; }
 .back { background: #999; color: white; }
+
+/* 🔥 카메라 화면 2배 확대 */
+#webcam canvas {
+  width: 600px;   /* 기존 300 → 600 */
+  height: 600px;
+  max-width: 95%;
+  border-radius: 15px;
+}
 </style>
 </head>
 
 <body>
 
-<!-- 홈 -->
 <div id="home" class="screen active">
   <h2>👕 옷 확인 앱</h2>
   <button class="teacher" onclick="show('teacher')">👩‍🏫 교사용</button>
   <button class="big" onclick="show('student')">👦 학생용</button>
 </div>
 
-<!-- 교사용 -->
 <div id="teacher" class="screen">
   <h2>👩‍🏫 옷 등록</h2>
   <button class="teacher" onclick="openTrain()">옷 등록하기</button>
   <br><button class="back" onclick="show('home')">뒤로</button>
 </div>
 
-<!-- 학생용 -->
 <div id="student" class="screen">
   <h2>👦 옷 확인</h2>
   <button class="big" onclick="start()">시작</button>
@@ -50,7 +55,6 @@ button {
   <br><button class="back" onclick="show('home')">뒤로</button>
 </div>
 
-<!-- 라이브러리 -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
@@ -59,22 +63,20 @@ button {
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
-// 화면 전환
 function show(page) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(page).classList.add('active');
 }
 
-// 🔥 수정된 부분 (팝업 차단 해결)
 function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 음성 큐
+// 음성 큐
 let voiceQueue = null;
 let lastState = "";
 
-// 음성 처리 (루프와 분리)
+// 음성 처리
 setInterval(() => {
   if (voiceQueue) {
     const msg = new SpeechSynthesisUtterance(voiceQueue);
@@ -87,10 +89,9 @@ setInterval(() => {
 
 let model, webcam;
 
-// 시작
 async function start() {
 
-  // 🔊 음성 권한 열기
+  // 음성 권한 열기
   const unlock = new SpeechSynthesisUtterance(" ");
   window.speechSynthesis.speak(unlock);
 
@@ -100,7 +101,9 @@ async function start() {
 
     model = await tmImage.load(modelURL, metaURL);
 
-    webcam = new tmImage.Webcam(300, 300, true);
+    // 🔥 내부 해상도도 2배
+    webcam = new tmImage.Webcam(600, 600, true);
+
     await webcam.setup();
     await webcam.play();
 
@@ -114,14 +117,12 @@ async function start() {
   }
 }
 
-// 루프
 async function loop() {
   webcam.update();
   await predict();
   requestAnimationFrame(loop);
 }
 
-// 예측
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
 
@@ -146,7 +147,7 @@ async function predict() {
   }
 
   document.getElementById("result").innerHTML =
-    "<h2 style='font-size:30px'>" + text + "</h2>";
+    "<h2 style='font-size:35px'>" + text + "</h2>";
 }
 
 </script>
