@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>옷 확인 앱</title>
+
+<style>
+body {
+  text-align:center;
+  font-family:sans-serif;
+  background:#f5f5f5;
+}
+
+.screen { display:none; }
+.active { display:block; }
+
+button {
+  font-size:22px;
+  padding:15px;
+  margin:10px;
+  width:80%;
+  border:none;
+  border-radius:10px;
+}
+
+.big {
+  font-size:28px;
+  padding:20px;
+  background:#4CAF50;
+  color:white;
+}
+
+.teacher-btn {
+  background:#607D8B;
+  color:white;
+}
+
+.back {
+  background:#999;
+  color:white;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 시작 화면 -->
+<div id="home" class="screen active">
+  <h2>👕 옷 확인 앱</h2>
+  <button class="teacher-btn" onclick="show('teacher')">👩‍🏫 교사용</button>
+  <button class="big" onclick="show('student')">👦 학생용</button>
+</div>
+
+<!-- 교사용 -->
+<div id="teacher" class="screen">
+  <h2>👩‍🏫 옷 등록</h2>
+  <p>학생의 옷 앞/뒤를 학습합니다</p>
+
+  <button class="teacher-btn" onclick="goTrain()">옷 등록하기</button>
+
+  <br><br>
+  <button class="back" onclick="show('home')">⬅ 뒤로</button>
+</div>
+
+<!-- 학생용 -->
+<div id="student" class="screen">
+  <h2>👦 옷 확인하기</h2>
+
+  <button class="big" onclick="start()">시작</button>
+
+  <div id="webcam-container"></div>
+  <div id="label-container"></div>
+
+  <br>
+  <button class="back" onclick="show('home')">⬅ 뒤로</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+
+<script>
+
+// ✅ 모델 URL
+const URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
+
+// ✅ 학습(편집) URL
+const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
+
+// 화면 전환
+function show(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screen).classList.add('active');
+}
+
+// 교사용 → 학습 화면 이동
+function goTrain() {
+  window.open(TRAIN_URL, "_blank");
+}
+
+// AI 실행
+let model, webcam;
+
+async function start() {
+  const modelURL = URL + "model.json";
+  const metadataURL = URL + "metadata.json";
+
+  model = await tmImage.load(modelURL, metadataURL);
+
+  webcam = new tmImage.Webcam(300, 300, true);
+  await webcam.setup();
+  await webcam.play();
+
+  document.getElementById("webcam-container").innerHTML = "";
+  document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+  loop();
+}
+
+async function loop() {
+  webcam.update();
+  await predict();
+  requestAnimationFrame(loop);
+}
+
+async function predict() {
+  const prediction = await model.predict(webcam.canvas);
+
+  let result = "";
+
+  prediction.forEach(p => {
+    if (p.className === "앞" && p.probability > 0.8) {
+      result = "👍 잘 입었어요!";
+    }
+    if (p.className === "뒤" && p.probability > 0.8) {
+      result = "❌ 반대로 입었어요!";
+    }
+  });
+
+  document.getElementById("label-container").innerHTML =
+    "<h2 style='font-size:32px'>" + result + "</h2>";
+}
+
+</script>
+
+</body>
+</html>
