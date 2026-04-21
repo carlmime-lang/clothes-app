@@ -6,12 +6,7 @@
 <title>옷 확인 앱</title>
 
 <style>
-body {
-  font-family: sans-serif;
-  text-align: center;
-  background: #f5f5f5;
-}
-
+body { font-family: sans-serif; text-align: center; background: #f5f5f5; }
 .screen { display: none; }
 .active { display: block; }
 
@@ -24,21 +19,9 @@ button {
   border-radius: 10px;
 }
 
-.big {
-  font-size: 26px;
-  background: #4CAF50;
-  color: white;
-}
-
-.teacher {
-  background: #607D8B;
-  color: white;
-}
-
-.back {
-  background: #999;
-  color: white;
-}
+.big { background: #4CAF50; color: white; }
+.teacher { background: #607D8B; color: white; }
+.back { background: #999; color: white; }
 </style>
 </head>
 
@@ -53,26 +36,18 @@ button {
 
 <!-- 교사용 -->
 <div id="teacher" class="screen">
-  <h2>👩‍🏫 옷 등록 (학습)</h2>
-  <p>Teachable Machine에서 학습합니다</p>
-
+  <h2>👩‍🏫 옷 등록</h2>
   <button class="teacher" onclick="openTrain()">옷 등록하기</button>
-
-  <br>
-  <button class="back" onclick="show('home')">뒤로</button>
+  <br><button class="back" onclick="show('home')">뒤로</button>
 </div>
 
 <!-- 학생용 -->
 <div id="student" class="screen">
   <h2>👦 옷 확인</h2>
-
   <button class="big" onclick="start()">시작</button>
-
   <div id="webcam"></div>
   <div id="result"></div>
-
-  <br>
-  <button class="back" onclick="show('home')">뒤로</button>
+  <br><button class="back" onclick="show('home')">뒤로</button>
 </div>
 
 <!-- 라이브러리 -->
@@ -81,33 +56,34 @@ button {
 
 <script>
 
-// URL 설정
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
-// 화면 전환
 function show(page) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(page).classList.add('active');
 }
 
-// 교사용
 function openTrain() {
   window.open(TRAIN_URL, "_blank");
 }
 
-// 🔊 음성 (안정 버전)
-function speak(text) {
-  const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = "ko-KR";
-  msg.rate = 1;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(msg);
-}
+// 🔊 음성 큐 방식 (핵심)
+let voiceQueue = null;
+let lastState = "";
+
+// 👉 음성은 루프 밖에서 처리
+setInterval(() => {
+  if (voiceQueue) {
+    const msg = new SpeechSynthesisUtterance(voiceQueue);
+    msg.lang = "ko-KR";
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(msg);
+    voiceQueue = null;
+  }
+}, 600);
 
 let model, webcam;
-let lastState = "";
-let speaking = false;
 
 // 시작
 async function start() {
@@ -127,18 +103,18 @@ async function start() {
     loop();
   } catch (e) {
     console.error(e);
-    alert("카메라 실행 오류");
+    alert("카메라 오류");
   }
 }
 
-// 반복
+// 카메라 루프 (절대 멈추지 않음)
 async function loop() {
   webcam.update();
   await predict();
   requestAnimationFrame(loop);
 }
 
-// 예측 + 음성 (안정화 핵심)
+// 예측
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
 
@@ -156,25 +132,11 @@ async function predict() {
     }
   });
 
-  // 👉 상태 바뀌고 + 말하는 중 아닐 때만 실행
-  if (currentState !== "" && currentState !== lastState && !speaking) {
-
-    speaking = true;
-
-    if (currentState === "good") {
-      speak("잘 입었어요");
-    }
-
-    if (currentState === "bad") {
-      speak("다시 생각해봐요");
-    }
-
+  // 👉 상태 바뀔 때만 음성 예약
+  if (currentState !== "" && currentState !== lastState) {
+    if (currentState === "good") voiceQueue = "잘 입었어요";
+    if (currentState === "bad") voiceQueue = "다시 생각해봐요";
     lastState = currentState;
-
-    // 👉 2초 후 다시 음성 허용
-    setTimeout(() => {
-      speaking = false;
-    }, 2000);
   }
 
   document.getElementById("result").innerHTML =
