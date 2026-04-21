@@ -59,20 +59,22 @@ button {
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
+// 화면 전환
 function show(page) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(page).classList.add('active');
 }
 
+// 🔥 수정된 부분 (팝업 차단 해결)
 function openTrain() {
-  window.open(TRAIN_URL, "_blank");
+  location.href = TRAIN_URL;
 }
 
-// 🔊 음성 큐 방식 (핵심)
+// 🔊 음성 큐
 let voiceQueue = null;
 let lastState = "";
 
-// 👉 음성은 루프 밖에서 처리
+// 음성 처리 (루프와 분리)
 setInterval(() => {
   if (voiceQueue) {
     const msg = new SpeechSynthesisUtterance(voiceQueue);
@@ -87,6 +89,11 @@ let model, webcam;
 
 // 시작
 async function start() {
+
+  // 🔊 음성 권한 열기
+  const unlock = new SpeechSynthesisUtterance(" ");
+  window.speechSynthesis.speak(unlock);
+
   try {
     const modelURL = MODEL_URL + "model.json";
     const metaURL = MODEL_URL + "metadata.json";
@@ -107,7 +114,7 @@ async function start() {
   }
 }
 
-// 카메라 루프 (절대 멈추지 않음)
+// 루프
 async function loop() {
   webcam.update();
   await predict();
@@ -132,7 +139,6 @@ async function predict() {
     }
   });
 
-  // 👉 상태 바뀔 때만 음성 예약
   if (currentState !== "" && currentState !== lastState) {
     if (currentState === "good") voiceQueue = "잘 입었어요";
     if (currentState === "bad") voiceQueue = "다시 생각해봐요";
