@@ -81,7 +81,7 @@ button {
 
 <script>
 
-// 모델 & 학습 URL
+// URL 설정
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
@@ -96,16 +96,18 @@ function openTrain() {
   window.open(TRAIN_URL, "_blank");
 }
 
-// 🔊 음성 함수
+// 🔊 음성 (안정 버전)
 function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
   msg.lang = "ko-KR";
-  window.speechSynthesis.cancel(); // 중복 방지
+  msg.rate = 1;
+  window.speechSynthesis.cancel();
   window.speechSynthesis.speak(msg);
 }
 
 let model, webcam;
-let lastState = ""; // 중복 음성 방지
+let lastState = "";
+let speaking = false;
 
 // 시작
 async function start() {
@@ -136,7 +138,7 @@ async function loop() {
   requestAnimationFrame(loop);
 }
 
-// 예측 + 음성
+// 예측 + 음성 (안정화 핵심)
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
 
@@ -154,15 +156,25 @@ async function predict() {
     }
   });
 
-  // 상태 바뀔 때만 음성 출력
-  if (currentState !== "" && currentState !== lastState) {
+  // 👉 상태 바뀌고 + 말하는 중 아닐 때만 실행
+  if (currentState !== "" && currentState !== lastState && !speaking) {
+
+    speaking = true;
+
     if (currentState === "good") {
       speak("잘 입었어요");
     }
+
     if (currentState === "bad") {
       speak("다시 생각해봐요");
     }
+
     lastState = currentState;
+
+    // 👉 2초 후 다시 음성 허용
+    setTimeout(() => {
+      speaking = false;
+    }, 2000);
   }
 
   document.getElementById("result").innerHTML =
