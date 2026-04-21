@@ -75,15 +75,18 @@ button {
   <button class="back" onclick="show('home')">⬅ 뒤로</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+<!-- 🔥 라이브러리 (버전 고정이 중요) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8"></script>
 
 <script>
+
+console.log("스크립트 정상 실행됨");
 
 // ✅ 모델 URL
 const URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 
-// ✅ 학습(편집) URL
+// ✅ 학습 페이지 URL
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
 // 화면 전환
@@ -92,7 +95,7 @@ function show(screen) {
   document.getElementById(screen).classList.add('active');
 }
 
-// 교사용 → 학습 화면 이동
+// 교사용
 function goTrain() {
   window.open(TRAIN_URL, "_blank");
 }
@@ -101,6 +104,8 @@ function goTrain() {
 let model, webcam;
 
 async function start() {
+  console.log("시작 버튼 눌림");
+
   const modelURL = URL + "model.json";
   const metadataURL = URL + "metadata.json";
 
