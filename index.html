@@ -23,7 +23,7 @@ button {
 .teacher { background: #607D8B; color: white; }
 .back { background: #999; color: white; }
 
-/* 카메라 2배 확대 */
+/* 카메라 화면 2배 */
 #webcam canvas {
   width: 600px;
   height: 600px;
@@ -60,34 +60,37 @@ button {
 
 <script>
 
+// 모델 URL
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
+// 화면 전환
 function show(page) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(page).classList.add('active');
 }
 
+// 학습 페이지 이동 (태블릿 대응)
 function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 파일 (같은 폴더에 넣기)
-const goodSound = new Audio("good.mp3");   // 교사 음성
+// 🔊 오디오 (같은 폴더에 파일 넣기)
+const goodSound = new Audio("good.mp3");
 const badSound = new Audio("bad.mp3");
-const dingSound = new Audio("ding.mp3");   // 효과음
+const dingSound = new Audio("ding.mp3");
 const alertSound = new Audio("alert.mp3");
 
-// 볼륨 조절 (선택)
 dingSound.volume = 0.6;
 alertSound.volume = 0.6;
 
 let lastState = "";
 let model, webcam;
 
+// 시작
 async function start() {
 
-  // 🔊 모바일 음성 권한 활성화
+  // 🔊 모바일 음성 권한 열기
   goodSound.play().catch(()=>{});
   badSound.play().catch(()=>{});
   dingSound.play().catch(()=>{});
@@ -99,7 +102,6 @@ async function start() {
 
     model = await tmImage.load(modelURL, metaURL);
 
-    // 카메라 2배
     webcam = new tmImage.Webcam(600, 600, true);
     await webcam.setup();
     await webcam.play();
@@ -114,30 +116,36 @@ async function start() {
   }
 }
 
+// 루프
 async function loop() {
   webcam.update();
   await predict();
   requestAnimationFrame(loop);
 }
 
+// 🔥 핵심: 가장 높은 확률 사용 (best 방식)
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
+
+  let best = prediction.reduce((a, b) =>
+    a.probability > b.probability ? a : b
+  );
 
   let text = "";
   let currentState = "";
 
-  prediction.forEach(p => {
-    if (p.className === "앞" && p.probability > 0.8) {
-      text = "👍 잘 입었어요!";
-      currentState = "good";
-    }
-    if (p.className === "뒤" && p.probability > 0.8) {
-      text = "❌ 반대로 입었어요!";
-      currentState = "bad";
-    }
-  });
+  // 🔥 클래스 이름 반드시 맞춰야 함
+  if (best.className === "앞") {
+    text = "👍 잘 입었어요!";
+    currentState = "good";
+  }
 
-  // 🔥 효과음 + 음성
+  if (best.className === "뒤") {
+    text = "❌ 반대로 입었어요!";
+    currentState = "bad";
+  }
+
+  // 🔊 효과음 + 음성
   if (currentState !== "" && currentState !== lastState) {
 
     if (currentState === "good") {
