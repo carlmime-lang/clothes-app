@@ -23,7 +23,7 @@ button {
 .teacher { background: #607D8B; color: white; }
 .back { background: #999; color: white; }
 
-/* 카메라 화면 2배 */
+/* 카메라 2배 */
 #webcam canvas {
   width: 600px;
   height: 600px;
@@ -60,7 +60,6 @@ button {
 
 <script>
 
-// 모델 URL
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
@@ -70,12 +69,12 @@ function show(page) {
   document.getElementById(page).classList.add('active');
 }
 
-// 학습 페이지 이동 (태블릿 대응)
+// 학습 페이지 이동
 function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 (같은 폴더에 파일 넣기)
+// 🔊 오디오 파일
 const goodSound = new Audio("good.mp3");
 const badSound = new Audio("bad.mp3");
 const dingSound = new Audio("ding.mp3");
@@ -90,7 +89,7 @@ let model, webcam;
 // 시작
 async function start() {
 
-  // 🔊 모바일 음성 권한 열기
+  // 🔊 모바일 음성 권한 활성화
   goodSound.play().catch(()=>{});
   badSound.play().catch(()=>{});
   dingSound.play().catch(()=>{});
@@ -123,7 +122,7 @@ async function loop() {
   requestAnimationFrame(loop);
 }
 
-// 🔥 핵심: 가장 높은 확률 사용 (best 방식)
+// 🔥 정확도 개선 핵심
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
 
@@ -134,15 +133,22 @@ async function predict() {
   let text = "";
   let currentState = "";
 
-  // 🔥 클래스 이름 반드시 맞춰야 함
-  if (best.className === "앞") {
-    text = "👍 잘 입었어요!";
-    currentState = "good";
-  }
+  // 👉 확률 기준 추가
+  if (best.probability > 0.7) {
 
-  if (best.className === "뒤") {
-    text = "❌ 반대로 입었어요!";
-    currentState = "bad";
+    if (best.className === "앞") {
+      text = "👍 잘 입었어요!";
+      currentState = "good";
+    }
+
+    if (best.className === "뒤") {
+      text = "❌ 반대로 입었어요!";
+      currentState = "bad";
+    }
+
+  } else {
+    text = "🤔 다시 확인해보세요";
+    currentState = "";
   }
 
   // 🔊 효과음 + 음성
@@ -151,7 +157,6 @@ async function predict() {
     if (currentState === "good") {
       dingSound.currentTime = 0;
       dingSound.play();
-
       setTimeout(() => {
         goodSound.currentTime = 0;
         goodSound.play();
@@ -161,7 +166,6 @@ async function predict() {
     if (currentState === "bad") {
       alertSound.currentTime = 0;
       alertSound.play();
-
       setTimeout(() => {
         badSound.currentTime = 0;
         badSound.play();
