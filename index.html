@@ -23,9 +23,9 @@ button {
 .teacher { background: #607D8B; color: white; }
 .back { background: #999; color: white; }
 
-/* 🔥 카메라 화면 2배 확대 */
+/* 카메라 2배 확대 */
 #webcam canvas {
-  width: 600px;   /* 기존 300 → 600 */
+  width: 600px;
   height: 600px;
   max-width: 95%;
   border-radius: 15px;
@@ -72,28 +72,26 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 음성 큐
-let voiceQueue = null;
+// 🔊 오디오 파일 (같은 폴더에 넣기)
+const goodSound = new Audio("good.mp3");   // 교사 음성
+const badSound = new Audio("bad.mp3");
+const dingSound = new Audio("ding.mp3");   // 효과음
+const alertSound = new Audio("alert.mp3");
+
+// 볼륨 조절 (선택)
+dingSound.volume = 0.6;
+alertSound.volume = 0.6;
+
 let lastState = "";
-
-// 음성 처리
-setInterval(() => {
-  if (voiceQueue) {
-    const msg = new SpeechSynthesisUtterance(voiceQueue);
-    msg.lang = "ko-KR";
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(msg);
-    voiceQueue = null;
-  }
-}, 600);
-
 let model, webcam;
 
 async function start() {
 
-  // 음성 권한 열기
-  const unlock = new SpeechSynthesisUtterance(" ");
-  window.speechSynthesis.speak(unlock);
+  // 🔊 모바일 음성 권한 활성화
+  goodSound.play().catch(()=>{});
+  badSound.play().catch(()=>{});
+  dingSound.play().catch(()=>{});
+  alertSound.play().catch(()=>{});
 
   try {
     const modelURL = MODEL_URL + "model.json";
@@ -101,9 +99,8 @@ async function start() {
 
     model = await tmImage.load(modelURL, metaURL);
 
-    // 🔥 내부 해상도도 2배
+    // 카메라 2배
     webcam = new tmImage.Webcam(600, 600, true);
-
     await webcam.setup();
     await webcam.play();
 
@@ -140,9 +137,29 @@ async function predict() {
     }
   });
 
+  // 🔥 효과음 + 음성
   if (currentState !== "" && currentState !== lastState) {
-    if (currentState === "good") voiceQueue = "잘 입었어요";
-    if (currentState === "bad") voiceQueue = "다시 생각해봐요";
+
+    if (currentState === "good") {
+      dingSound.currentTime = 0;
+      dingSound.play();
+
+      setTimeout(() => {
+        goodSound.currentTime = 0;
+        goodSound.play();
+      }, 500);
+    }
+
+    if (currentState === "bad") {
+      alertSound.currentTime = 0;
+      alertSound.play();
+
+      setTimeout(() => {
+        badSound.currentTime = 0;
+        badSound.play();
+      }, 500);
+    }
+
     lastState = currentState;
   }
 
