@@ -71,19 +71,17 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 (필요할 때만 재생)
-const goodSound = new Audio("good.mp3");
-const badSound = new Audio("bad.mp3");
-const dingSound = new Audio("ding.mp3");
-const alertSound = new Audio("alert.mp3");
-
-dingSound.volume = 0.6;
-alertSound.volume = 0.6;
+// 🔥 오디오를 필요할 때만 생성
+function playSound(src, volume=1) {
+  const audio = new Audio(src);
+  audio.volume = volume;
+  audio.play().catch(()=>{});
+}
 
 let lastState = "";
 let model, webcam;
 
-// 시작 (소리 관련 코드 없음!)
+// 시작
 async function start() {
   try {
     const modelURL = MODEL_URL + "model.json";
@@ -139,26 +137,22 @@ async function predict() {
     currentState = "";
   }
 
-  // 🔊 효과음 + 음성 (여기서만 재생!)
+  // 🔊 효과음 + 음성 (필요할 때만 생성)
   if (currentState !== "" && currentState !== lastState) {
 
     if (currentState === "good") {
-      dingSound.currentTime = 0;
-      dingSound.play();
+      playSound("ding.mp3", 0.6);
 
       setTimeout(() => {
-        goodSound.currentTime = 0;
-        goodSound.play();
+        playSound("good.mp3");
       }, 500);
     }
 
     if (currentState === "bad") {
-      alertSound.currentTime = 0;
-      alertSound.play();
+      playSound("alert.mp3", 0.6);
 
       setTimeout(() => {
-        badSound.currentTime = 0;
-        badSound.play();
+        playSound("bad.mp3");
       }, 500);
     }
 
