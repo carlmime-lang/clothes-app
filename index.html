@@ -71,7 +71,7 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오
+// 🔊 오디오 (필요할 때만 재생)
 const goodSound = new Audio("good.mp3");
 const badSound = new Audio("bad.mp3");
 const dingSound = new Audio("ding.mp3");
@@ -83,25 +83,8 @@ alertSound.volume = 0.6;
 let lastState = "";
 let model, webcam;
 
-// 🔥 무음으로 오디오 권한만 열기
-function unlockAudio(audio) {
-  audio.volume = 0;
-  audio.play().then(() => {
-    audio.pause();
-    audio.currentTime = 0;
-    audio.volume = 1;
-  }).catch(()=>{});
-}
-
-// 시작
+// 시작 (소리 관련 코드 없음!)
 async function start() {
-
-  // 🔊 소리 안 나게 권한만 열기
-  unlockAudio(goodSound);
-  unlockAudio(badSound);
-  unlockAudio(dingSound);
-  unlockAudio(alertSound);
-
   try {
     const modelURL = MODEL_URL + "model.json";
     const metaURL = MODEL_URL + "metadata.json";
@@ -156,7 +139,7 @@ async function predict() {
     currentState = "";
   }
 
-  // 🔊 효과음 + 음성
+  // 🔊 효과음 + 음성 (여기서만 재생!)
   if (currentState !== "" && currentState !== lastState) {
 
     if (currentState === "good") {
