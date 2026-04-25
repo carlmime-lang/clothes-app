@@ -71,17 +71,29 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔥 오디오를 필요할 때만 생성
+// 🔊 현재 재생 중인 오디오
+let currentAudio = null;
+
+// 🔊 소리 재생 함수 (겹침 방지)
 function playSound(src, volume=1) {
+
+  // 🔇 이전 소리 끄기
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+  }
+
+  // 🔊 새 소리
   const audio = new Audio(src);
   audio.volume = volume;
   audio.play().catch(()=>{});
+
+  currentAudio = audio;
 }
 
 let lastState = "";
 let model, webcam;
 
-// 시작
 async function start() {
   try {
     const modelURL = MODEL_URL + "model.json";
@@ -119,7 +131,6 @@ async function predict() {
   let text = "";
   let currentState = "";
 
-  // 👉 확률 기준
   if (best.probability > 0.7) {
 
     if (best.className === "앞") {
@@ -137,7 +148,7 @@ async function predict() {
     currentState = "";
   }
 
-  // 🔊 효과음 + 음성 (필요할 때만 생성)
+  // 🔊 소리 처리 (겹침 없음)
   if (currentState !== "" && currentState !== lastState) {
 
     if (currentState === "good") {
