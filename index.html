@@ -71,14 +71,23 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 현재 오디오 + 예약 타이머
+// 🔊 오디오 상태 관리
 let currentAudio = null;
-let soundTimeout = null;
+let isPlaying = false;
+let lastPlayTime = 0;
+const COOLDOWN = 1500; // 1.5초
 
-// 🔊 소리 재생 (겹침 완전 방지)
 function playSound(src, volume=1) {
 
-  // 이전 소리 종료
+  const now = Date.now();
+
+  // 🔥 재생 중이거나 쿨타임이면 차단
+  if (isPlaying || (now - lastPlayTime < COOLDOWN)) return;
+
+  isPlaying = true;
+  lastPlayTime = now;
+
+  // 이전 소리 끄기
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
@@ -89,6 +98,11 @@ function playSound(src, volume=1) {
   audio.play().catch(()=>{});
 
   currentAudio = audio;
+
+  // 재생 끝나면 해제
+  audio.onended = () => {
+    isPlaying = false;
+  };
 }
 
 let lastState = "";
@@ -148,28 +162,15 @@ async function predict() {
     currentState = "";
   }
 
-  // 🔥 소리 처리 (완전 해결 버전)
+  // 🔊 소리 (완전 안정)
   if (currentState !== "" && currentState !== lastState) {
 
-    // 🔥 이전 예약 제거
-    if (soundTimeout) {
-      clearTimeout(soundTimeout);
-    }
-
     if (currentState === "good") {
-      playSound("ding.mp3", 0.6);
-
-      soundTimeout = setTimeout(() => {
-        playSound("good.mp3");
-      }, 500);
+      playSound("good.mp3");
     }
 
     if (currentState === "bad") {
-      playSound("alert.mp3", 0.6);
-
-      soundTimeout = setTimeout(() => {
-        playSound("bad.mp3");
-      }, 500);
+      playSound("bad.mp3");
     }
 
     lastState = currentState;
