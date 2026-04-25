@@ -10,7 +10,20 @@ body {
   font-family: sans-serif;
   text-align: center;
   margin: 0;
-  transition: background 0.2s;
+  transition: background 0.3s;
+}
+
+/* 흔들림 효과 */
+@keyframes shake {
+  0% { transform: translate(0,0); }
+  25% { transform: translate(4px,0); }
+  50% { transform: translate(-4px,0); }
+  75% { transform: translate(4px,0); }
+  100% { transform: translate(0,0); }
+}
+
+.shake {
+  animation: shake 0.3s;
 }
 
 .screen { display: none; }
@@ -36,14 +49,42 @@ button {
   border-radius: 20px;
 }
 
+/* 이모지 애니메이션 */
+@keyframes pop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.pop {
+  animation: pop 0.3s;
+}
+
 #emoji {
-  font-size: 90px;
+  font-size: 100px;
   margin-top: 10px;
 }
 
 #resultText {
   font-size: 40px;
   margin-top: 10px;
+}
+
+/* 진행 바 */
+#barContainer {
+  width: 80%;
+  height: 20px;
+  background: #ddd;
+  margin: 10px auto;
+  border-radius: 10px;
+}
+
+#bar {
+  height: 100%;
+  width: 0%;
+  background: green;
+  border-radius: 10px;
+  transition: width 0.2s;
 }
 </style>
 </head>
@@ -71,6 +112,11 @@ button {
   <div id="emoji">🙂</div>
   <div id="resultText">준비됐어요</div>
 
+  <!-- 🔥 진행바 -->
+  <div id="barContainer">
+    <div id="bar"></div>
+  </div>
+
   <br><button class="back" onclick="show('home')">뒤로</button>
 </div>
 
@@ -91,27 +137,28 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 관리
+// 🔊 소리
 let currentAudio = null;
 
-// 🔥 즉시 교체 재생
 function playSound(src) {
-
-  // 이전 소리 즉시 종료
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
-
   const audio = new Audio(src);
   audio.play().catch(()=>{});
   currentAudio = audio;
 }
 
 let lastState = "";
+let stableState = "";
+let count = 0;
+const THRESHOLD = 2;
+
 let model, webcam;
 
 async function start() {
+
   const modelURL = MODEL_URL + "model.json";
   const metaURL = MODEL_URL + "metadata.json";
 
@@ -141,9 +188,12 @@ async function predict() {
     a.probability > b.probability ? a : b
   );
 
+  // 📊 안정도 바
+  document.getElementById("bar").style.width =
+    Math.min(best.probability * 100, 100) + "%";
+
   let currentState = "";
 
-  // 🔥 클래스별 기준
   if (best.className === "앞" && best.probability > 0.7) {
     currentState = "good";
   }
@@ -152,32 +202,51 @@ async function predict() {
     currentState = "bad";
   }
 
-  // 🎯 상태 변경 시 즉시 실행
-  if (currentState !== lastState) {
+  // 🔥 안정화
+  if (currentState === stableState) {
+    count++;
+  } else {
+    stableState = currentState;
+    count = 1;
+  }
 
-    if (currentState === "good") {
+  if (count >= THRESHOLD) {
+
+    // 👍 잘 입음
+    if (stableState === "good" && lastState !== "good") {
+
       document.body.style.background = "#d4edda";
       document.getElementById("emoji").innerText = "👍";
       document.getElementById("resultText").innerText = "잘 입었어요!";
 
+      document.getElementById("emoji").classList.add("pop");
+
       playSound("good.mp3");
+      lastState = "good";
     }
 
-    else if (currentState === "bad") {
+    // ❌ 잘못 입음
+    else if (stableState === "bad" && lastState !== "bad") {
+
       document.body.style.background = "#f8d7da";
       document.getElementById("emoji").innerText = "❌";
       document.getElementById("resultText").innerText = "다시 생각해봐요";
 
+      document.body.classList.add("shake");
+      document.getElementById("emoji").classList.add("pop");
+
+      setTimeout(()=> {
+        document.body.classList.remove("shake");
+      }, 300);
+
       playSound("bad.mp3");
+      lastState = "bad";
     }
 
-    else {
-      document.body.style.background = "#eeeeee";
-      document.getElementById("emoji").innerText = "🙂";
-      document.getElementById("resultText").innerText = "확인 중...";
-    }
-
-    lastState = currentState;
+  } else {
+    document.body.style.background = "#eeeeee";
+    document.getElementById("emoji").innerText = "🙂";
+    document.getElementById("resultText").innerText = "확인 중...";
   }
 }
 
