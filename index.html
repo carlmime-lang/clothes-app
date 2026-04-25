@@ -10,7 +10,7 @@ body {
   font-family: sans-serif;
   text-align: center;
   margin: 0;
-  transition: background 0.3s;
+  transition: background 0.2s;
 }
 
 .screen { display: none; }
@@ -91,26 +91,24 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 (겹침 방지)
+// 🔊 오디오 관리
 let currentAudio = null;
 
+// 🔥 즉시 교체 재생
 function playSound(src) {
+
+  // 이전 소리 즉시 종료
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
+
   const audio = new Audio(src);
   audio.play().catch(()=>{});
   currentAudio = audio;
 }
 
-// 🔥 상태 안정화 변수
-let stableState = "";
-let stateCount = 0;
-const STABLE_THRESHOLD = 2;
-
 let lastState = "";
-
 let model, webcam;
 
 async function start() {
@@ -145,47 +143,41 @@ async function predict() {
 
   let currentState = "";
 
-  if (best.probability > 0.7) {
-    if (best.className === "앞") currentState = "good";
-    if (best.className === "뒤") currentState = "bad";
+  // 🔥 클래스별 기준
+  if (best.className === "앞" && best.probability > 0.7) {
+    currentState = "good";
   }
 
-  // 🔥 안정화 로직
-  if (currentState === stableState) {
-    stateCount++;
-  } else {
-    stableState = currentState;
-    stateCount = 1;
+  if (best.className === "뒤" && best.probability > 0.6) {
+    currentState = "bad";
   }
 
-  if (stateCount >= STABLE_THRESHOLD) {
+  // 🎯 상태 변경 시 즉시 실행
+  if (currentState !== lastState) {
 
-    if (stableState === "good") {
+    if (currentState === "good") {
       document.body.style.background = "#d4edda";
       document.getElementById("emoji").innerText = "👍";
       document.getElementById("resultText").innerText = "잘 입었어요!";
 
-      if (lastState !== "good") {
-        playSound("good.mp3");
-        lastState = "good";
-      }
+      playSound("good.mp3");
     }
 
-    else if (stableState === "bad") {
+    else if (currentState === "bad") {
       document.body.style.background = "#f8d7da";
       document.getElementById("emoji").innerText = "❌";
       document.getElementById("resultText").innerText = "다시 생각해봐요";
 
-      if (lastState !== "bad") {
-        playSound("bad.mp3");
-        lastState = "bad";
-      }
+      playSound("bad.mp3");
     }
 
-  } else {
-    document.body.style.background = "#eeeeee";
-    document.getElementById("emoji").innerText = "🙂";
-    document.getElementById("resultText").innerText = "확인 중...";
+    else {
+      document.body.style.background = "#eeeeee";
+      document.getElementById("emoji").innerText = "🙂";
+      document.getElementById("resultText").innerText = "확인 중...";
+    }
+
+    lastState = currentState;
   }
 }
 
