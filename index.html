@@ -71,19 +71,19 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 현재 재생 중인 오디오
+// 🔊 현재 오디오 + 예약 타이머
 let currentAudio = null;
+let soundTimeout = null;
 
-// 🔊 소리 재생 함수 (겹침 방지)
+// 🔊 소리 재생 (겹침 완전 방지)
 function playSound(src, volume=1) {
 
-  // 🔇 이전 소리 끄기
+  // 이전 소리 종료
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
 
-  // 🔊 새 소리
   const audio = new Audio(src);
   audio.volume = volume;
   audio.play().catch(()=>{});
@@ -148,13 +148,18 @@ async function predict() {
     currentState = "";
   }
 
-  // 🔊 소리 처리 (겹침 없음)
+  // 🔥 소리 처리 (완전 해결 버전)
   if (currentState !== "" && currentState !== lastState) {
+
+    // 🔥 이전 예약 제거
+    if (soundTimeout) {
+      clearTimeout(soundTimeout);
+    }
 
     if (currentState === "good") {
       playSound("ding.mp3", 0.6);
 
-      setTimeout(() => {
+      soundTimeout = setTimeout(() => {
         playSound("good.mp3");
       }, 500);
     }
@@ -162,7 +167,7 @@ async function predict() {
     if (currentState === "bad") {
       playSound("alert.mp3", 0.6);
 
-      setTimeout(() => {
+      soundTimeout = setTimeout(() => {
         playSound("bad.mp3");
       }, 500);
     }
