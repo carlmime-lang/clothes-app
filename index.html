@@ -23,7 +23,6 @@ button {
 .teacher { background: #607D8B; color: white; }
 .back { background: #999; color: white; }
 
-/* 카메라 2배 */
 #webcam canvas {
   width: 600px;
   height: 600px;
@@ -63,18 +62,16 @@ button {
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/WMkucO1Ey/";
 const TRAIN_URL = "https://teachablemachine.withgoogle.com/train/image/1GgdkPW2342neXZijD8jNARBOZStCcQ2P";
 
-// 화면 전환
 function show(page) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(page).classList.add('active');
 }
 
-// 학습 페이지 이동
 function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 파일
+// 🔊 오디오
 const goodSound = new Audio("good.mp3");
 const badSound = new Audio("bad.mp3");
 const dingSound = new Audio("ding.mp3");
@@ -86,14 +83,24 @@ alertSound.volume = 0.6;
 let lastState = "";
 let model, webcam;
 
+// 🔥 무음으로 오디오 권한만 열기
+function unlockAudio(audio) {
+  audio.volume = 0;
+  audio.play().then(() => {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = 1;
+  }).catch(()=>{});
+}
+
 // 시작
 async function start() {
 
-  // 🔊 모바일 음성 권한 활성화
-  goodSound.play().catch(()=>{});
-  badSound.play().catch(()=>{});
-  dingSound.play().catch(()=>{});
-  alertSound.play().catch(()=>{});
+  // 🔊 소리 안 나게 권한만 열기
+  unlockAudio(goodSound);
+  unlockAudio(badSound);
+  unlockAudio(dingSound);
+  unlockAudio(alertSound);
 
   try {
     const modelURL = MODEL_URL + "model.json";
@@ -115,14 +122,12 @@ async function start() {
   }
 }
 
-// 루프
 async function loop() {
   webcam.update();
   await predict();
   requestAnimationFrame(loop);
 }
 
-// 🔥 정확도 개선 핵심
 async function predict() {
   const prediction = await model.predict(webcam.canvas);
 
@@ -133,7 +138,7 @@ async function predict() {
   let text = "";
   let currentState = "";
 
-  // 👉 확률 기준 추가
+  // 👉 확률 기준
   if (best.probability > 0.7) {
 
     if (best.className === "앞") {
@@ -157,6 +162,7 @@ async function predict() {
     if (currentState === "good") {
       dingSound.currentTime = 0;
       dingSound.play();
+
       setTimeout(() => {
         goodSound.currentTime = 0;
         goodSound.play();
@@ -166,6 +172,7 @@ async function predict() {
     if (currentState === "bad") {
       alertSound.currentTime = 0;
       alertSound.play();
+
       setTimeout(() => {
         badSound.currentTime = 0;
         badSound.play();
