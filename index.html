@@ -10,7 +10,7 @@ body {
   font-family: sans-serif;
   text-align: center;
   margin: 0;
-  transition: background 0.5s;
+  transition: background 0.3s;
 }
 
 .screen { display: none; }
@@ -36,13 +36,14 @@ button {
   border-radius: 20px;
 }
 
-#resultText {
-  font-size: 40px;
-  margin-top: 20px;
+#emoji {
+  font-size: 90px;
+  margin-top: 10px;
 }
 
-#emoji {
-  font-size: 80px;
+#resultText {
+  font-size: 40px;
+  margin-top: 10px;
 }
 </style>
 </head>
@@ -90,7 +91,7 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 관리
+// 🔊 오디오 (겹침 방지)
 let currentAudio = null;
 
 function playSound(src) {
@@ -98,13 +99,18 @@ function playSound(src) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
-
   const audio = new Audio(src);
   audio.play().catch(()=>{});
   currentAudio = audio;
 }
 
+// 🔥 상태 안정화 변수
+let stableState = "";
+let stateCount = 0;
+const STABLE_THRESHOLD = 2;
+
 let lastState = "";
+
 let model, webcam;
 
 async function start() {
@@ -130,6 +136,7 @@ async function loop() {
 }
 
 async function predict() {
+
   const prediction = await model.predict(webcam.canvas);
 
   let best = prediction.reduce((a, b) =>
@@ -143,34 +150,43 @@ async function predict() {
     if (best.className === "뒤") currentState = "bad";
   }
 
-  // 🎯 상태별 UI
-  if (currentState === "good") {
-    document.body.style.background = "#d4edda"; // 초록
-    document.getElementById("emoji").innerText = "👍";
-    document.getElementById("resultText").innerText = "잘 입었어요!";
-
-    if (lastState !== "good") {
-      playSound("good.mp3");
-    }
+  // 🔥 안정화 로직
+  if (currentState === stableState) {
+    stateCount++;
+  } else {
+    stableState = currentState;
+    stateCount = 1;
   }
 
-  else if (currentState === "bad") {
-    document.body.style.background = "#f8d7da"; // 빨강
-    document.getElementById("emoji").innerText = "❌";
-    document.getElementById("resultText").innerText = "다시 생각해봐요";
+  if (stateCount >= STABLE_THRESHOLD) {
 
-    if (lastState !== "bad") {
-      playSound("bad.mp3");
+    if (stableState === "good") {
+      document.body.style.background = "#d4edda";
+      document.getElementById("emoji").innerText = "👍";
+      document.getElementById("resultText").innerText = "잘 입었어요!";
+
+      if (lastState !== "good") {
+        playSound("good.mp3");
+        lastState = "good";
+      }
     }
-  }
 
-  else {
-    document.body.style.background = "#eeeeee"; // 회색
+    else if (stableState === "bad") {
+      document.body.style.background = "#f8d7da";
+      document.getElementById("emoji").innerText = "❌";
+      document.getElementById("resultText").innerText = "다시 생각해봐요";
+
+      if (lastState !== "bad") {
+        playSound("bad.mp3");
+        lastState = "bad";
+      }
+    }
+
+  } else {
+    document.body.style.background = "#eeeeee";
     document.getElementById("emoji").innerText = "🙂";
     document.getElementById("resultText").innerText = "확인 중...";
   }
-
-  lastState = currentState;
 }
 
 </script>
