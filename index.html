@@ -6,17 +6,23 @@
 <title>옷 확인 앱</title>
 
 <style>
-body { font-family: sans-serif; text-align: center; background: #f5f5f5; }
+body {
+  font-family: sans-serif;
+  text-align: center;
+  margin: 0;
+  transition: background 0.5s;
+}
+
 .screen { display: none; }
 .active { display: block; }
 
 button {
-  font-size: 20px;
-  padding: 15px;
+  font-size: 22px;
+  padding: 18px;
   margin: 10px;
-  width: 80%;
+  width: 85%;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .big { background: #4CAF50; color: white; }
@@ -24,10 +30,19 @@ button {
 .back { background: #999; color: white; }
 
 #webcam canvas {
-  width: 600px;
-  height: 600px;
+  width: 700px;
+  height: 700px;
   max-width: 95%;
-  border-radius: 15px;
+  border-radius: 20px;
+}
+
+#resultText {
+  font-size: 40px;
+  margin-top: 20px;
+}
+
+#emoji {
+  font-size: 80px;
 }
 </style>
 </head>
@@ -49,8 +64,12 @@ button {
 <div id="student" class="screen">
   <h2>👦 옷 확인</h2>
   <button class="big" onclick="start()">시작</button>
+
   <div id="webcam"></div>
-  <div id="result"></div>
+
+  <div id="emoji">🙂</div>
+  <div id="resultText">준비됐어요</div>
+
   <br><button class="back" onclick="show('home')">뒤로</button>
 </div>
 
@@ -71,62 +90,37 @@ function openTrain() {
   location.href = TRAIN_URL;
 }
 
-// 🔊 오디오 상태 관리
+// 🔊 오디오 관리
 let currentAudio = null;
-let isPlaying = false;
-let lastPlayTime = 0;
-const COOLDOWN = 1500; // 1.5초
 
-function playSound(src, volume=1) {
-
-  const now = Date.now();
-
-  // 🔥 재생 중이거나 쿨타임이면 차단
-  if (isPlaying || (now - lastPlayTime < COOLDOWN)) return;
-
-  isPlaying = true;
-  lastPlayTime = now;
-
-  // 이전 소리 끄기
+function playSound(src) {
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
 
   const audio = new Audio(src);
-  audio.volume = volume;
   audio.play().catch(()=>{});
-
   currentAudio = audio;
-
-  // 재생 끝나면 해제
-  audio.onended = () => {
-    isPlaying = false;
-  };
 }
 
 let lastState = "";
 let model, webcam;
 
 async function start() {
-  try {
-    const modelURL = MODEL_URL + "model.json";
-    const metaURL = MODEL_URL + "metadata.json";
+  const modelURL = MODEL_URL + "model.json";
+  const metaURL = MODEL_URL + "metadata.json";
 
-    model = await tmImage.load(modelURL, metaURL);
+  model = await tmImage.load(modelURL, metaURL);
 
-    webcam = new tmImage.Webcam(600, 600, true);
-    await webcam.setup();
-    await webcam.play();
+  webcam = new tmImage.Webcam(700, 700, true);
+  await webcam.setup();
+  await webcam.play();
 
-    document.getElementById("webcam").innerHTML = "";
-    document.getElementById("webcam").appendChild(webcam.canvas);
+  document.getElementById("webcam").innerHTML = "";
+  document.getElementById("webcam").appendChild(webcam.canvas);
 
-    loop();
-  } catch (e) {
-    console.error(e);
-    alert("카메라 오류");
-  }
+  loop();
 }
 
 async function loop() {
@@ -142,42 +136,41 @@ async function predict() {
     a.probability > b.probability ? a : b
   );
 
-  let text = "";
   let currentState = "";
 
   if (best.probability > 0.7) {
-
-    if (best.className === "앞") {
-      text = "👍 잘 입었어요!";
-      currentState = "good";
-    }
-
-    if (best.className === "뒤") {
-      text = "❌ 반대로 입었어요!";
-      currentState = "bad";
-    }
-
-  } else {
-    text = "🤔 다시 확인해보세요";
-    currentState = "";
+    if (best.className === "앞") currentState = "good";
+    if (best.className === "뒤") currentState = "bad";
   }
 
-  // 🔊 소리 (완전 안정)
-  if (currentState !== "" && currentState !== lastState) {
+  // 🎯 상태별 UI
+  if (currentState === "good") {
+    document.body.style.background = "#d4edda"; // 초록
+    document.getElementById("emoji").innerText = "👍";
+    document.getElementById("resultText").innerText = "잘 입었어요!";
 
-    if (currentState === "good") {
+    if (lastState !== "good") {
       playSound("good.mp3");
     }
-
-    if (currentState === "bad") {
-      playSound("bad.mp3");
-    }
-
-    lastState = currentState;
   }
 
-  document.getElementById("result").innerHTML =
-    "<h2 style='font-size:35px'>" + text + "</h2>";
+  else if (currentState === "bad") {
+    document.body.style.background = "#f8d7da"; // 빨강
+    document.getElementById("emoji").innerText = "❌";
+    document.getElementById("resultText").innerText = "다시 생각해봐요";
+
+    if (lastState !== "bad") {
+      playSound("bad.mp3");
+    }
+  }
+
+  else {
+    document.body.style.background = "#eeeeee"; // 회색
+    document.getElementById("emoji").innerText = "🙂";
+    document.getElementById("resultText").innerText = "확인 중...";
+  }
+
+  lastState = currentState;
 }
 
 </script>
